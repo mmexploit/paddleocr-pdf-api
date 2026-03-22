@@ -52,8 +52,11 @@ def init_db():
             );
         """)
         now = time.time()
+        stale = db.execute("SELECT id FROM jobs WHERE status = 'processing'").fetchall()
+        for row in stale:
+            db.execute("DELETE FROM pages WHERE job_id = ?", (row["id"],))
         db.execute(
-            "UPDATE jobs SET status = 'queued', updated_at = ? WHERE status = 'processing'",
+            "UPDATE jobs SET status = 'queued', processed_pages = 0, updated_at = ? WHERE status = 'processing'",
             (now,),
         )
 
