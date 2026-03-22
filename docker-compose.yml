@@ -1,0 +1,20 @@
+services:
+  paddleocr:
+    build: .
+    ports:
+      - "8099:8000"
+    # environment:
+    #   - API_KEY=your-secret-key
+    volumes:
+      - ocr-data:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  ocr-data:

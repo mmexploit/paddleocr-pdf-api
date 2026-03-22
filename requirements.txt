@@ -1,0 +1,6 @@
+paddleocr>=3.0
+pypdfium2
+Pillow
+fastapi
+uvicorn[standard]
+python-multipart
