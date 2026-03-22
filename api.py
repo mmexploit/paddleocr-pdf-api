@@ -8,6 +8,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+import magic
 import pypdfium2 as pdfium
 import uvicorn
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
@@ -261,12 +262,16 @@ async def submit_job(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are supported")
 
+    content = await file.read()
+    mime = magic.from_buffer(content, mime=True)
+    if mime != "application/pdf":
+        raise HTTPException(400, f"File is not a valid PDF (detected: {mime})")
+
     job_id = uuid.uuid4().hex
     job_dir = Path(UPLOAD_DIR) / job_id
     job_dir.mkdir(parents=True)
 
     pdf_path = job_dir / "input.pdf"
-    content = await file.read()
     pdf_path.write_bytes(content)
 
     now = time.time()

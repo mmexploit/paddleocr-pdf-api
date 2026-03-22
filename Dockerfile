@@ -7,7 +7,7 @@ ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-dev \
-    libgl1-mesa-glx libglib2.0-0 libgomp1 \
+    libgl1-mesa-glx libglib2.0-0 libgomp1 libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

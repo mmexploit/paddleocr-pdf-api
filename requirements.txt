@@ -4,3 +4,4 @@ Pillow
 fastapi
 uvicorn[standard]
 python-multipart
+python-magic
