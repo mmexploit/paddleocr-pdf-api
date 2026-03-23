@@ -29,15 +29,22 @@ def _resolve_ocr_cpu_threads() -> int:
 
 
 def _apply_native_thread_env(threads: int) -> None:
-    # OpenMP / BLAS: must be set before Paddle / NumPy heavy paths load (see PaddleOCR #8784).
+    # OpenMP / BLAS: must be set before Paddle / NumPy heavy paths load.
+    # See PaddleOCR #8784 (mkldnn / threading); Docker image libs + env (#10147, Paddle #54482).
     for key in (
         "OMP_NUM_THREADS",
         "MKL_NUM_THREADS",
         "OPENBLAS_NUM_THREADS",
         "VECLIB_MAXIMUM_THREADS",
         "NUMEXPR_NUM_THREADS",
+        "GOTO_NUM_THREADS",
     ):
         os.environ.setdefault(key, str(threads))
+    # Paddle CPU math kernels (read before paddle native libs init).
+    os.environ.setdefault("FLAGS_cpu_math_num_threads", str(threads))
+    # Intel OpenMP / oneDNN in containers: avoid bad pinning; low spin (typical Docker/K8s win).
+    os.environ.setdefault("KMP_BLOCKTIME", "0")
+    os.environ.setdefault("KMP_AFFINITY", "disabled")
 
 
 _OCR_CPU_THREADS = _resolve_ocr_cpu_threads()
