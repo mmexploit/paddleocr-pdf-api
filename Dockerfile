@@ -12,8 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-RUN pip3 install --no-cache-dir paddlepaddle-gpu==3.2.2 \
-    --index-url https://www.paddlepaddle.org.cn/packages/stable/cu126/
+RUN pip3 install --no-cache-dir paddlepaddle==3.2.0 \
+    -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+
 
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt && \
