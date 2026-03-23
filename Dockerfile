@@ -1,4 +1,6 @@
-FROM paddlepaddle/paddle:2.5.0rc0-cpu
+# CPU image ships PaddlePaddle 3.2.x with a supported Python (cp310+). Older
+# paddle:2.5.x bases use Python 3.8, which has no paddlepaddle 3.2 wheels on PyPI.
+FROM paddlepaddle/paddle:3.2.0
 
 # Environment
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -22,12 +24,7 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /app
 
-# Upgrade pip first (important for Paddle)
 RUN pip install --no-cache-dir --upgrade pip
-
-# Install PaddlePaddle (CPU)
-RUN pip install --no-cache-dir paddlepaddle==3.2.0 \
-    -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 
 # Install Python dependencies
 COPY requirements.txt .
