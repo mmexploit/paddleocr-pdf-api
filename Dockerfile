@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM paddlepaddle/paddle:2.5.0rc0-cpu
 
 # Environment
 ENV DEBIAN_FRONTEND=noninteractive \
