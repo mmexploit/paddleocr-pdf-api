@@ -3,7 +3,7 @@ services:
     build: .
     ports:
       - "8099:8000"
-    # environment:
+    environment:
     #   - API_KEY=your-secret-key
     # CPU performance (defaults: all visible CPUs, MKL-DNN on, async queues on):
       - OCR_CPU_THREADS=28
