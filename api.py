@@ -1,3 +1,4 @@
+import inspect
 import os
 import re
 import sqlite3
@@ -8,11 +9,77 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+
+def _env_bool(name: str, default: bool) -> bool:
+    v = os.environ.get(name)
+    if v is None or v.strip() == "":
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _resolve_ocr_cpu_threads() -> int:
+    raw = os.environ.get("OCR_CPU_THREADS")
+    if raw is not None and raw.strip() != "":
+        try:
+            return max(1, int(raw))
+        except ValueError:
+            pass
+    n = os.cpu_count()
+    return max(1, n if n else 1)
+
+
+def _apply_native_thread_env(threads: int) -> None:
+    # OpenMP / BLAS: must be set before Paddle / NumPy heavy paths load (see PaddleOCR #8784).
+    for key in (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+    ):
+        os.environ.setdefault(key, str(threads))
+
+
+_OCR_CPU_THREADS = _resolve_ocr_cpu_threads()
+_apply_native_thread_env(_OCR_CPU_THREADS)
+
 import magic
 import pypdfium2 as pdfium
 import uvicorn
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from paddleocr import PaddleOCRVL
+
+
+def _kwargs_for_call(func, kw: dict) -> dict:
+    """Pass only arguments the callable accepts (supports **kwargs)."""
+    try:
+        sig = inspect.signature(func)
+        params = sig.parameters.values()
+        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
+            return dict(kw)
+        names = {p.name for p in params} - {"self"}
+        return {k: v for k, v in kw.items() if k in names}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _paddleocr_vl_perf_kwargs() -> dict:
+    # PaddleOCR-VL: enable_mkldnn + cpu_threads + use_queues (PaddleOCR 3.x docs).
+    # Classic PaddleOCR CPU speedup: enable_mkldnn=True (github.com/PaddlePaddle/PaddleOCR/issues/8784).
+    out = {
+        "enable_mkldnn": _env_bool("OCR_ENABLE_MKLDNN", True),
+        "cpu_threads": _OCR_CPU_THREADS,
+        "use_queues": _env_bool("OCR_USE_QUEUES", True),
+    }
+    dev = os.environ.get("OCR_DEVICE", "").strip()
+    if dev:
+        out["device"] = dev
+    return out
+
+
+_BASE_PERF = _paddleocr_vl_perf_kwargs()
+PADDLEOCR_VL_INIT_KWARGS = _kwargs_for_call(PaddleOCRVL.__init__, _BASE_PERF)
+PADDLEOCR_VL_PREDICT_KWARGS = _kwargs_for_call(PaddleOCRVL.predict, _BASE_PERF)
 
 
 DB_PATH = os.environ.get("DB_PATH", "/data/ocr.db")
@@ -113,8 +180,12 @@ class OCRWorker:
 
     def _load_model(self):
         if self._model is None:
-            print("Loading PaddleOCR-VL model...")
-            self._model = PaddleOCRVL()
+            print(
+                f"Loading PaddleOCR-VL (cpu_threads={_OCR_CPU_THREADS}, "
+                f"enable_mkldnn={_BASE_PERF.get('enable_mkldnn')}, "
+                f"use_queues={_BASE_PERF.get('use_queues')})..."
+            )
+            self._model = PaddleOCRVL(**PADDLEOCR_VL_INIT_KWARGS)
             print("Model loaded.")
         return self._model
 
@@ -178,7 +249,7 @@ class OCRWorker:
                     tmp_path = tmp.name
 
                 try:
-                    result = ocr.predict(input=tmp_path)
+                    result = ocr.predict(input=tmp_path, **PADDLEOCR_VL_PREDICT_KWARGS)
 
                     markdown_parts = []
                     for res in result:

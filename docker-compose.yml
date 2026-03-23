@@ -5,6 +5,11 @@ services:
       - "8099:8000"
     # environment:
     #   - API_KEY=your-secret-key
+    # CPU performance (defaults: all visible CPUs, MKL-DNN on, async queues on):
+      - OCR_CPU_THREADS=28
+      - OCR_ENABLE_MKLDNN=true
+      - OCR_USE_QUEUES=true
+      - OCR_DEVICE=cpu
     volumes:
       - ocr-data:/data
     restart: unless-stopped
