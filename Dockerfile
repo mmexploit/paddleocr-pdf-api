@@ -1,6 +1,4 @@
-# CPU image ships PaddlePaddle 3.2.x with a supported Python (cp310+). Older
-# paddle:2.5.x bases use Python 3.8, which has no paddlepaddle 3.2 wheels on PyPI.
-FROM paddlepaddle/paddle:3.2.0
+FROM python:3.8-slim-bullseye
 
 # Environment
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -40,5 +38,4 @@ VOLUME ["/data"]
 # Expose port
 EXPOSE 8000
 
-# Start app
-CMD ["python", "api.py"]
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "6"]
