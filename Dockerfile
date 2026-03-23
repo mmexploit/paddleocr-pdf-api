@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.10-slim
 
 # Environment
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -22,7 +22,12 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /app
 
+# Upgrade pip first (important for Paddle)
 RUN pip install --no-cache-dir --upgrade pip
+
+# Install PaddlePaddle (CPU)
+RUN pip install --no-cache-dir paddlepaddle==3.2.0 \
+    -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 
 # Install Python dependencies
 COPY requirements.txt .
@@ -38,4 +43,5 @@ VOLUME ["/data"]
 # Expose port
 EXPOSE 8000
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "6"]
+# Start app
+CMD ["python", "api.py"]
