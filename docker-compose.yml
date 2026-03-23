@@ -7,13 +7,6 @@ services:
     #   - API_KEY=your-secret-key
     volumes:
       - ocr-data:/data
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     restart: unless-stopped
 
 volumes:
