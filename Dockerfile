@@ -1,47 +1,28 @@
 FROM python:3.10-slim
 
-# Environment
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
-    DISABLE_MODEL_SOURCE_CHECK=True \
-    PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV DISABLE_MODEL_SOURCE_CHECK=True
+ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
 
-# System dependencies (fixed + updated)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    python3-dev \
-    libgl1 \
-    libglib2.0-0 \
-    libgomp1 \
-    libmagic1 \
-    ca-certificates \
-    curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-dev \
+    libgl1-mesa-glx libglib2.0-0 libgomp1 libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Upgrade pip first (important for Paddle)
-RUN pip install --no-cache-dir --upgrade pip
+RUN pip3 install --no-cache-dir paddlepaddle-gpu==3.2.2 \
+    --index-url https://www.paddlepaddle.org.cn/packages/stable/cu126/
 
-# Install PaddlePaddle (CPU)
-RUN pip install --no-cache-dir paddlepaddle==3.2.0 \
-    -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
-
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir "paddlex[ocr]"
+RUN pip3 install --no-cache-dir -r requirements.txt && \
+    pip3 install --no-cache-dir "paddlex[ocr]"
 
-# Copy app
 COPY api.py .
 
-# Volume (optional for Coolify persistence)
-VOLUME ["/data"]
+VOLUME /data
 
-# Expose port
 EXPOSE 8000
 
-# Start app
-CMD ["python", "api.py"]
+CMD ["python3", "api.py"]
